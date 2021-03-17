@@ -11,7 +11,7 @@ def exec_config(**kwargs):
     """main function for executing setconfig commands to southbound drivers"""
     lib = kwargs.get("library", False)
     config = kwargs.get("config", False)
-    j2conf =  kwargs.get("j2config", False)
+    j2conf = kwargs.get("j2config", False)
     webhook = kwargs.get("webhook", False)
     pre_checks = kwargs.get("pre_checks", False)
     post_checks = kwargs.get("post_checks", False)
@@ -47,13 +47,9 @@ def exec_config(**kwargs):
         with naplm(config=config, **kwargs) as napalm_driver:
             result = napalm_driver.exec_config(config=config, **kwargs)
 
-
     if not pre_checks and not post_checks:
         try:
-            if lib == "netmiko":
-                pass
-
-            elif lib == "napalm":
+            if lib in ("netmiko", "napalm"):
                 pass
 
             elif lib == "ncclient":
@@ -66,22 +62,22 @@ def exec_config(**kwargs):
                 sesh = ncc.connect()
                 result = ncc.editconfig(sesh)
                 ncc.logout(sesh)
+
             elif lib == "restconf":
                 rcc = restconf(**kwargs)
                 sesh = rcc.connect()
                 result = rcc.config(sesh)
                 rcc.logout(sesh)
+
             else:
                 raise NotImplementedError(f"unknown 'library' parameter {lib}")
+
         except Exception as e:
             write_meta_error(f"{e}")
 
     else:
         try:
-            if lib == "netmiko":
-                pass
-
-            elif lib == "napalm":
+            if lib in ("netmiko", "napalm"):
                 pass
 
             elif lib == "ncclient":
@@ -95,11 +91,12 @@ def exec_config(**kwargs):
                 sesh = rcc.connect()
                 result = rcc.config(sesh)
                 rcc.logout(sesh)
+
             else:
                 raise NotImplementedError(f"unknown 'library' parameter {lib}")
 
         except Exception as e:
-            write_meta_error(f"{e}")        
+            write_meta_error(f"{e}")
 
     try:
         if webhook:

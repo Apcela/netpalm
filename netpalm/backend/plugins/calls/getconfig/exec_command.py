@@ -25,6 +25,10 @@ def exec_command(**kwargs):
         with naplm(**kwargs) as napalm_driver:
             result = napalm_driver.exec_command(**kwargs)
 
+    elif lib == "puresnmp":
+        with pursnmp(**kwargs) as snmp_driver:
+            result = snmp_driver.exec_command(**kwargs)
+
     command = kwargs.get("command", False)
     webhook = kwargs.get("webhook", False)
     post_checks = kwargs.get("post_checks", False)
@@ -36,27 +40,21 @@ def exec_command(**kwargs):
 
     if not post_checks:
         try:
-            if lib == "netmiko":
+            if lib in ("netmiko", "napalm", "puresnmp"):
                 pass
 
-            elif lib == "napalm":
-                pass
-
-            elif lib == "puresnmp":
-                snm = pursnmp(**kwargs)
-                sesh = snm.connect()
-                result = snm.sendcommand(sesh, commandlst)
-                snm.logout(sesh)
             elif lib == "ncclient":
                 ncc = ncclien(**kwargs)
                 sesh = ncc.connect()
                 result = ncc.getconfig(sesh)
                 ncc.logout(sesh)
+
             elif lib == "restconf":
                 rc = restconf(**kwargs)
                 sesh = rc.connect()
                 result = rc.sendcommand(sesh)
                 rc.logout(sesh)
+
             else:
                 raise NotImplementedError(f"unknown 'library' parameter {lib}")
 
@@ -65,10 +63,7 @@ def exec_command(**kwargs):
 
     else:
         try:
-            if lib == "netmiko":
-                pass
-
-            elif lib == "napalm":
+            if lib in ("netmiko", "napalm", "puresnmp"):
                 pass
 
             elif lib == "ncclient":
