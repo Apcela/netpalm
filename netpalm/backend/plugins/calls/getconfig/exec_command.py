@@ -21,6 +21,10 @@ def exec_command(**kwargs):
         with netmko(**kwargs) as netmiko_driver:
             result = netmiko_driver.exec_command(**kwargs)
 
+    elif lib == "napalm":
+        with naplm(**kwargs) as napalm_driver:
+            result = napalm_driver.exec_command(**kwargs)
+
     command = kwargs.get("command", False)
     webhook = kwargs.get("webhook", False)
     post_checks = kwargs.get("post_checks", False)
@@ -36,10 +40,8 @@ def exec_command(**kwargs):
                 pass
 
             elif lib == "napalm":
-                napl = naplm(**kwargs)
-                napl.connect()
-                result = napl.sendcommand(commandlst)
-                napl.logout()
+                pass
+
             elif lib == "puresnmp":
                 snm = pursnmp(**kwargs)
                 sesh = snm.connect()
@@ -67,20 +69,7 @@ def exec_command(**kwargs):
                 pass
 
             elif lib == "napalm":
-                napl = naplm(**kwargs)
-                napl.connect()
-                if commandlst:
-                    result = napl.sendcommand(commandlst)
-                if post_checks:
-                    for postcheck in post_checks:
-                        command = postcheck["get_config_args"]["command"]
-                        post_check_result = napl.sendcommand([command])
-                        for matchstr in postcheck["match_str"]:
-                            if postcheck["match_type"] == "include" and matchstr not in str(post_check_result):
-                                write_meta_error(f"PostCheck Failed: {matchstr} not found in {post_check_result}")
-                            if postcheck["match_type"] == "exclude" and matchstr in str(post_check_result):
-                                write_meta_error(f"PostCheck Failed: {matchstr} found in {post_check_result}")
-                napl.logout()
+                pass
 
             elif lib == "ncclient":
                 ncc = ncclien(**kwargs)

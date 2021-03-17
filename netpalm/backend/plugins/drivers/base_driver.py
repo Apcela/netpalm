@@ -63,14 +63,14 @@ class BaseDriver(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def exec_command(self, **kwargs) -> Dict:
-        """Mandatory entrypoint for exec_command call"""
-        raise NotImplementedError()
+    def sendcommand(self, *args, **kwargs) -> Dict[str, str]:
+        """Mandatory endpoint for sending a command"""
+        raise NotImplementedError
 
     @abc.abstractmethod
-    def exec_config(self, **kwargs) -> Dict:
-        """Mandatory entrypoint for exec_config call"""
-        raise NotImplementedError()
+    def config(self, *args, **kwargs) -> Dict[str, str]:
+        """Mandatory endpoint for sending config changes"""
+        raise NotImplementedError
 
     def __enter__(self) -> "BaseDriver":
         self.connect()
@@ -78,3 +78,47 @@ class BaseDriver(metaclass=abc.ABCMeta):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.logout()
+
+    def exec_command(self, command: Union[List, str] = None, post_checks: List[Dict] = None, **kwargs) -> Dict:
+        assert self.session is not None
+        commands = normalize_commands(command)
+
+        post_checks = post_checks if post_checks is not None else []
+
+        if not (commands or post_checks):
+            raise ValueError('exec_command requires either `command` or `post_checks`')
+
+        result = {}
+        if commands:
+            result = self.sendcommand(commands)
+
+        for post_check in post_checks:
+            command = post_check["get_config_args"]["command"]
+            post_check_result = self.sendcommand([command])
+            validate_post_check(post_check, post_check_result)
+
+        return result
+
+    def exec_config(self, config: Union[List, str] = None,
+                    enable_mode: bool = False,
+                    post_checks: List[Dict] = None,
+                    pre_checks: List[Dict] = None, **kwargs) -> Dict:
+        assert self.session is not None
+        # config = normalize_commands(config)
+
+        post_checks = post_checks if post_checks is not None else []
+        pre_checks = pre_checks if pre_checks is not None else []
+
+        for pre_check in pre_checks:
+            command = pre_check["get_config_args"]["command"]
+            pre_check_result = self.sendcommand([command])
+            validate_pre_check(pre_check, pre_check_result)
+
+        # testing for pre_check_ok is unnecessary because validation raises exceptions anyway
+        result = self.config(config, enable_mode)
+        for post_check in post_checks:
+            command = post_check["get_config_args"]["command"]
+            post_check_result = self.sendcommand([command])
+            validate_post_check(post_check, post_check_result)
+
+        return result

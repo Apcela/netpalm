@@ -38,16 +38,24 @@ def exec_config(**kwargs):
         with netmko(config=config, **kwargs) as netmiko_driver:
             result = netmiko_driver.exec_config(config=config, **kwargs)
 
+    elif lib == "napalm":
+        try:
+            del kwargs["config"]
+        except KeyError:
+            pass
+
+        with naplm(config=config, **kwargs) as napalm_driver:
+            result = napalm_driver.exec_config(config=config, **kwargs)
+
+
     if not pre_checks and not post_checks:
         try:
             if lib == "netmiko":
                 pass
 
             elif lib == "napalm":
-                napl = naplm(**kwargs)
-                napl.connect()
-                result = napl.config(config)
-                napl.logout()
+                pass
+
             elif lib == "ncclient":
                 # if we rendered j2config, add it to the kwargs['args'] dict
                 if j2conf and config:
@@ -74,32 +82,7 @@ def exec_config(**kwargs):
                 pass
 
             elif lib == "napalm":
-                napl = naplm(**kwargs)
-                napl.connect()
-                if pre_checks:
-                    for precheck in pre_checks:
-                        command = precheck["get_config_args"]["command"]
-                        pre_check_result = napl.sendcommand([command])
-                        for matchstr in precheck["match_str"]:
-                            if precheck["match_type"] == "include" and matchstr not in str(pre_check_result):
-                                write_meta_error(f"PreCheck Failed: {matchstr} not found in {pre_check_result}")
-                                pre_check_ok = False
-                            if precheck["match_type"] == "exclude" and matchstr in str(pre_check_result):
-                                write_meta_error(f"PreCheck Failed: {matchstr} found in {pre_check_result}")
-                                pre_check_ok = False
-
-                if pre_check_ok:
-                    result = napl.config(config)
-                    if post_checks:
-                        for postcheck in post_checks:
-                            command = postcheck["get_config_args"]["command"]
-                            post_check_result = napl.sendcommand([command])
-                            for matchstr in postcheck["match_str"]:
-                                if postcheck["match_type"] == "include" and matchstr not in str(post_check_result):
-                                    write_meta_error(f"PostCheck Failed: {matchstr} not found in {post_check_result}")
-                                if postcheck["match_type"] == "exclude" and matchstr in str(post_check_result):
-                                    write_meta_error(f"PostCheck Failed: {matchstr} found in {post_check_result}")
-                napl.logout()
+                pass
 
             elif lib == "ncclient":
                 ncc = ncclien(**kwargs)

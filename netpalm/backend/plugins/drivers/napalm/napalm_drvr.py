@@ -4,7 +4,7 @@ import napalm
 from napalm.base.base import NetworkDriver
 
 from netpalm.backend.core.utilities.rediz_meta import write_meta_error
-from netpalm.backend.plugins.drivers.base_driver import BaseDriver, normalize_commands
+from netpalm.backend.plugins.drivers.base_driver import BaseDriver, normalize_commands, validate_post_check
 
 
 class naplm(BaseDriver):
@@ -14,7 +14,7 @@ class naplm(BaseDriver):
         # convert the netmiko naming format to the native napalm format
         driver_lookup = {"arista_eos": "eos", "juniper": "junos", "cisco_xr": "iosxr", "nxos": "nxos",
                          "cisco_nxos_ssh": "nxos_ssh", "cisco_ios": "ios"}
-        self.driver = driver_lookup[self.connection_args.get("device_type", False)]
+        self.driver = driver_lookup[self.connection_args["device_type"]]
         self.connection_args["hostname"] = self.connection_args.pop("host")
         del self.connection_args["device_type"]
 
@@ -43,13 +43,7 @@ class naplm(BaseDriver):
         except Exception as e:
             write_meta_error(f"{e}")
 
-    def exec_command(self, **kwargs) -> Dict:
-        raise NotImplementedError()
-
-    def exec_config(self, **kwargs) -> Dict:
-        raise NotImplementedError()
-
-    def config(self, command=False, dry_run=False) -> Dict:
+    def config(self, command=False, dry_run=False, *args, **kwargs) -> Dict[str, str]:
         assert self.session is not None
         session = self.session
         try:

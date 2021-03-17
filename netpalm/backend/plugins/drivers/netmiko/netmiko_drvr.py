@@ -1,12 +1,11 @@
 import logging
-from typing import Dict, List, Union
+from typing import Dict, List
 
 from netmiko import ConnectHandler, BaseConnection
 
 from netpalm.backend.core.confload.confload import config
 from netpalm.backend.core.utilities.rediz_meta import write_meta_error
-from netpalm.backend.plugins.drivers.base_driver import BaseDriver, normalize_commands, validate_post_check, \
-    validate_pre_check
+from netpalm.backend.plugins.drivers.base_driver import BaseDriver, normalize_commands
 
 log = logging.getLogger(__name__)
 
@@ -48,50 +47,6 @@ class netmko(BaseDriver):
 
         except Exception as e:
             write_meta_error(f"{e}")
-
-    def exec_command(self, command: Union[List, str] = None, post_checks: List[Dict] = None, **kwargs) -> Dict:
-        assert self.session is not None
-        commands = normalize_commands(command)
-
-        post_checks = post_checks if post_checks is not None else []
-
-        if not (commands or post_checks):
-            raise ValueError('exec_command requires either `command` or `post_checks`')
-
-        result = {}
-        if commands:
-            result = self.sendcommand(commands)
-
-        for post_check in post_checks:
-            command = post_check["get_config_args"]["command"]
-            post_check_result = self.sendcommand([command])
-            validate_post_check(post_check, post_check_result)
-
-        return result
-
-    def exec_config(self, config: Union[List, str] = None,
-                    enable_mode: bool = False,
-                    post_checks: List[Dict] = None,
-                    pre_checks: List[Dict] = None, **kwargs) -> Dict:
-        assert self.session is not None
-        # config = normalize_commands(config)
-
-        post_checks = post_checks if post_checks is not None else []
-        pre_checks = pre_checks if pre_checks is not None else []
-
-        for pre_check in pre_checks:
-            command = pre_check["get_config_args"]["command"]
-            pre_check_result = self.sendcommand([command])
-            validate_pre_check(pre_check, pre_check_result)
-
-        # testing for pre_check_ok is unnecessary because validation raises exceptions anyway
-        result = self.config(config, enable_mode)
-        for post_check in post_checks:
-            command = post_check["get_config_args"]["command"]
-            post_check_result = self.sendcommand([command])
-            validate_post_check(post_check, post_check_result)
-
-        return result
 
     def config(self,
                command='',
