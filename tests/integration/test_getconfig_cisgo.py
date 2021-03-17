@@ -22,13 +22,17 @@ class CisgoHelper:
     def __init__(self):
         self.hostname = "cisgo"
         self.port_number = next(cisgo_port_number)
+        log.info(f'allocating Cisshgo instance: {self.port_number}')
         self.clean()
 
     def clean(self):
         pl = {
             "library": "netmiko",
             "connection_args": self.netmiko_connection_args,
-            "command": "reset state"
+            "command": "reset state",
+            "args": {
+                "expect_string": f"{CISGO_DEFAULT_HOSTNAME}>"
+            }
         }
         result = helper.post_and_check('/getconfig', pl)
 

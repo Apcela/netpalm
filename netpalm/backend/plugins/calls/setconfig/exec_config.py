@@ -17,7 +17,6 @@ def exec_config(**kwargs):
     post_checks = kwargs.get("post_checks", False)
     enable_mode = kwargs.get("enable_mode", False)
 
-    result = False
     pre_check_ok = True
 
     if j2conf:
@@ -25,22 +24,30 @@ def exec_config(**kwargs):
         try:
             res = render_j2template(j2conf["template"], template_type="config", kwargs=j2confargs)
             config = res["data"]["task_result"]["template_render_result"]
+
         except Exception as e:
             config = False
             write_meta_error(f"{e}")
 
+    if lib == "netmiko":
+        try:
+            del kwargs["config"]
+        except KeyError:
+            pass
+
+        with netmko(config=config, **kwargs) as netmiko_driver:
+            result = netmiko_driver.exec_config(config=config, **kwargs)
+
     if not pre_checks and not post_checks:
         try:
             if lib == "netmiko":
-                netmik = netmko(**kwargs)
-                sesh = netmik.connect()
-                result = netmik.config(sesh, config, enable_mode)
-                netmik.logout(sesh)
+                pass
+
             elif lib == "napalm":
                 napl = naplm(**kwargs)
-                sesh = napl.connect()
-                result = napl.config(sesh, config)
-                napl.logout(sesh)
+                napl.connect()
+                result = napl.config(config)
+                napl.logout()
             elif lib == "ncclient":
                 # if we rendered j2config, add it to the kwargs['args'] dict
                 if j2conf and config:
@@ -56,45 +63,23 @@ def exec_config(**kwargs):
                 sesh = rcc.connect()
                 result = rcc.config(sesh)
                 rcc.logout(sesh)
+            else:
+                raise NotImplementedError(f"unknown 'library' parameter {lib}")
         except Exception as e:
             write_meta_error(f"{e}")
 
     else:
         try:
             if lib == "netmiko":
-                netmik = netmko(**kwargs)
-                sesh = netmik.connect()
-                if pre_checks:
-                    for precheck in pre_checks:
-                        command = precheck["get_config_args"]["command"]
-                        pre_check_result = netmik.sendcommand(sesh, [command])
-                        for matchstr in precheck["match_str"]:
-                            if precheck["match_type"] == "include" and matchstr not in str(pre_check_result):
-                                write_meta_error(f"PreCheck Failed: {matchstr} not found in {pre_check_result}")
-                                pre_check_ok = False
-                            if precheck["match_type"] == "exclude" and matchstr in str(pre_check_result):
-                                write_meta_error(f"PreCheck Failed: {matchstr} found in {pre_check_result}")
-                                pre_check_ok = False
-                if pre_check_ok:
-                    result = netmik.config(sesh, config, enable_mode)
-                    if post_checks:
-                        for postcheck in post_checks:
-                            command = postcheck["get_config_args"]["command"]
-                            post_check_result = netmik.sendcommand(sesh, [command])
-                            for matchstr in postcheck["match_str"]:
-                                if postcheck["match_type"] == "include" and matchstr not in str(post_check_result):
-                                    write_meta_error(f"PostCheck Failed: {matchstr} not found in {post_check_result}")
-                                if postcheck["match_type"] == "exclude" and matchstr in str(post_check_result):
-                                    write_meta_error(f"PostCheck Failed: {matchstr} found in {post_check_result}")
-                netmik.logout(sesh)
+                pass
 
             elif lib == "napalm":
                 napl = naplm(**kwargs)
-                sesh = napl.connect()
+                napl.connect()
                 if pre_checks:
                     for precheck in pre_checks:
                         command = precheck["get_config_args"]["command"]
-                        pre_check_result = napl.sendcommand(sesh, [command])
+                        pre_check_result = napl.sendcommand([command])
                         for matchstr in precheck["match_str"]:
                             if precheck["match_type"] == "include" and matchstr not in str(pre_check_result):
                                 write_meta_error(f"PreCheck Failed: {matchstr} not found in {pre_check_result}")
@@ -102,29 +87,34 @@ def exec_config(**kwargs):
                             if precheck["match_type"] == "exclude" and matchstr in str(pre_check_result):
                                 write_meta_error(f"PreCheck Failed: {matchstr} found in {pre_check_result}")
                                 pre_check_ok = False
+
                 if pre_check_ok:
-                    result = napl.config(sesh,config)
+                    result = napl.config(config)
                     if post_checks:
                         for postcheck in post_checks:
                             command = postcheck["get_config_args"]["command"]
-                            post_check_result = napl.sendcommand(sesh, [command])
+                            post_check_result = napl.sendcommand([command])
                             for matchstr in postcheck["match_str"]:
                                 if postcheck["match_type"] == "include" and matchstr not in str(post_check_result):
                                     write_meta_error(f"PostCheck Failed: {matchstr} not found in {post_check_result}")
                                 if postcheck["match_type"] == "exclude" and matchstr in str(post_check_result):
                                     write_meta_error(f"PostCheck Failed: {matchstr} found in {post_check_result}")
-                napl.logout(sesh)
+                napl.logout()
 
             elif lib == "ncclient":
                 ncc = ncclien(**kwargs)
                 sesh = ncc.connect()
                 result = ncc.editconfig(sesh)
                 ncc.logout(sesh)
+
             elif lib == "restconf":
                 rcc = restconf(**kwargs)
                 sesh = rcc.connect()
                 result = rcc.config(sesh)
                 rcc.logout(sesh)
+            else:
+                raise NotImplementedError(f"unknown 'library' parameter {lib}")
+
         except Exception as e:
             write_meta_error(f"{e}")        
 
@@ -132,6 +122,7 @@ def exec_config(**kwargs):
         if webhook:
             current_jobdata = render_netpalm_payload(job_result=result)
             exec_webhook_func(jobdata=current_jobdata, webhook_payload=webhook)
+
     except Exception as e:
         write_meta_error(f"{e}")
 

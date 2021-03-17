@@ -9,6 +9,7 @@ log = logging.getLogger(__name__)
 
 helper = NetpalmTestHelper()
 
+pytestmark = pytest.mark.fulllab
 @pytest.mark.service
 def test_prepare_vlan_service_environment():
     pl = {

@@ -42,7 +42,7 @@ class NetpalmTestHelper:
         self.test_device_cisgo = "cisgo"
         self.http_timeout = 5
         self.task_timeout = 15
-        self.task_poll_interval = 0.2
+        self.task_poll_interval = 0.5
 
     def get(self, endpoint: str):
         try:

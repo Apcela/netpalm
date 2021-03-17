@@ -57,31 +57,40 @@ def napalm_get_network_driver(mocker: MockerFixture) -> MockerFixture:
 def test_napalm_connect(napalm_get_network_driver: Mock, rq_job):
     napalm_driver = naplm(kwarg={}, connection_args=NAPALM_C_ARGS.copy())
     assert napalm_driver.driver == "ios"
-    sesh = napalm_driver.connect()
+    napalm_driver.connect()
     napalm_get_network_driver.assert_called_with("ios")
     napalm_get_network_driver.driver.assert_called_once_with(hostname=NAPALM_C_ARGS["host"],
                                                              username=NAPALM_C_ARGS["username"],
                                                              password=NAPALM_C_ARGS["password"])
 
 
+def test_napalm_context_manager(napalm_get_network_driver: Mock, rq_job):
+    with naplm(kwarg={}, connection_args=NAPALM_C_ARGS.copy()) as napalm_driver:
+        napalm_get_network_driver.assert_called_with("ios")
+
+    assert napalm_get_network_driver.session.close.called
+
+
+
 def test_napalm_sendcommand(napalm_get_network_driver: Mock, rq_job):
     napalm_driver = naplm(kwarg={}, connection_args=NAPALM_C_ARGS.copy())
     assert napalm_driver.driver == "ios"
-    mock_session = napalm_driver.connect()
+    napalm_driver.connect()
     assert napalm_get_network_driver.called  # make *certain* mock is used
+    mock_session = napalm_get_network_driver.session
 
-    result = napalm_driver.sendcommand(mock_session, command=["get_config"])
+    result = napalm_driver.sendcommand(command=["get_config"])
     assert result["get_config"] == ["my config"]
     assert mock_session.open.called
     assert mock_session.get_config.called
 
-    result = napalm_driver.sendcommand(mock_session, command=["show run"])
+    result = napalm_driver.sendcommand(command=["show run"])
     assert result["show run"] == ["ran show run"]
     mock_session.cli.assert_called_with(["show run"])
 
     mock_session.get_config.reset_mock()
     mock_session.cli.reset_mock()
-    result = napalm_driver.sendcommand(mock_session, command=["get_config", "show run"])
+    result = napalm_driver.sendcommand(command=["get_config", "show run"])
     assert result["get_config"] == ["my config"]
     assert result["show run"] == ["ran show run"]
     assert mock_session.get_config.called
@@ -91,10 +100,11 @@ def test_napalm_sendcommand(napalm_get_network_driver: Mock, rq_job):
 def test_napalm_config(napalm_get_network_driver: Mock, rq_job):
     napalm_driver = naplm(kwarg={}, connection_args=NAPALM_C_ARGS.copy())
     assert napalm_driver.driver == "ios"
-    mock_session = napalm_driver.connect()
+    napalm_driver.connect()
     assert napalm_get_network_driver.called  # make *certain* mock is used
+    mock_session = napalm_get_network_driver.session
 
-    _ = napalm_driver.config(mock_session, command=["get_config"])
+    _ = napalm_driver.config(command=["get_config"])
     assert mock_session.open.called
     assert mock_session.load_merge_candidate.called
     assert mock_session.compare_config.called
@@ -103,7 +113,7 @@ def test_napalm_config(napalm_get_network_driver: Mock, rq_job):
 
     mock_session.reset_mock()
     assert not mock_session.open.called
-    _ = napalm_driver.config(mock_session, command=["get_config"], dry_run=True)
+    _ = napalm_driver.config(command=["get_config"], dry_run=True)
     assert mock_session.open.called
     assert mock_session.load_merge_candidate.called
     assert mock_session.compare_config.called

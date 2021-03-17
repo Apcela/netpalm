@@ -49,45 +49,50 @@ def netmiko_connection_handler(mocker: MockerFixture) -> MockerFixture:
 
 def test_netmko_connect(netmiko_connection_handler: Mock):
     netmiko_driver = netmko(kwarg={}, connection_args=NETMIKO_C_ARGS)
-    sesh = netmiko_driver.connect()
+    netmiko_driver.connect()
     netmiko_connection_handler.assert_called_once_with(**NETMIKO_C_ARGS)
 
 
+def test_netmko_context_manager(netmiko_connection_handler: Mock):
+    with netmko(kwarg={}, connection_args=NETMIKO_C_ARGS) as netmiko_driver:
+        netmiko_connection_handler.assert_called_once_with(**NETMIKO_C_ARGS)
+
+    assert netmiko_connection_handler.session.disconnect.called
+
+
 def test_netmko_sendcommand(netmiko_connection_handler: Mock):
-    netmiko_driver = netmko(kwarg={}, connection_args={})
-    sesh = netmiko_driver.connect()
-    netmiko_connection_handler.assert_called()  # make *certain* mock is getting used
+    with netmko(kwarg={}, connection_args={}) as netmiko_driver:
+        netmiko_connection_handler.assert_called()  # make *certain* mock is getting used
 
-    result = netmiko_driver.sendcommand(sesh, NETMIKO_COMMANDS.keys())
+        result = netmiko_driver.sendcommand(NETMIKO_COMMANDS.keys())
 
-    for command in NETMIKO_COMMANDS.keys():
-        netmiko_connection_handler.session.send_command.assert_any_call(command)
+        for command in NETMIKO_COMMANDS.keys():
+            netmiko_connection_handler.session.send_command.assert_any_call(command)
 
-    for command, value in NETMIKO_COMMANDS.items():
-        assert result[command] == value.splitlines()
+        for command, value in NETMIKO_COMMANDS.items():
+            assert result[command] == value.splitlines()
 
 
 def test_netmko_config(netmiko_connection_handler: Mock, rq_job):
-    netmiko_driver = netmko(kwarg={}, connection_args={})
-    mock_session = netmiko_driver.connect()
-    netmiko_connection_handler.assert_called()  # make *certain* mock is getting used
+    with netmko(kwarg={}, connection_args={}) as netmiko_driver:
+        netmiko_connection_handler.assert_called()  # make *certain* mock is getting used
+        mock_session = netmiko_driver.session
+        _ = netmiko_driver.config("hostname asdf", dry_run=True, enter_enable=True)
+        mock_session.send_config_set.assert_called_once_with(["hostname asdf"])
+        assert not mock_session.commit.called
+        assert mock_session.enable.called
 
-    _ = netmiko_driver.config(mock_session, "hostname asdf", dry_run=True, enter_enable=True)
-    mock_session.send_config_set.assert_called_once_with(["hostname asdf"])
-    assert not mock_session.commit.called
-    assert mock_session.enable.called
+        mock_session.commit.reset_mock()
+        mock_session.enable.reset_mock()
+        _ = netmiko_driver.config("hostname asdf")
+        mock_session.send_config_set.assert_called_with(["hostname asdf"])
+        assert mock_session.commit.called
+        assert not mock_session.enable.called
 
-    mock_session.commit.reset_mock()
-    mock_session.enable.reset_mock()
-    _ = netmiko_driver.config(mock_session, "hostname asdf")
-    mock_session.send_config_set.assert_called_with(["hostname asdf"])
-    assert mock_session.commit.called
-    assert not mock_session.enable.called
-
-    del mock_session.commit
-    _ = netmiko_driver.config(mock_session, "hostname asdf")
-    mock_session.send_config_set.assert_called_with(["hostname asdf"])
-    assert mock_session.save_config.called
+        del mock_session.commit
+        _ = netmiko_driver.config("hostname asdf")
+        mock_session.send_config_set.assert_called_with(["hostname asdf"])
+        assert mock_session.save_config.called
 
 
 def test_netmiko_gc_exec_command(netmiko_connection_handler: Mock):
@@ -100,6 +105,7 @@ def test_netmiko_gc_exec_command(netmiko_connection_handler: Mock):
 
     netmiko_connection_handler.assert_called_once_with(**NETMIKO_C_ARGS)
     for command, value in NETMIKO_COMMANDS.items():
+        assert command in result
         assert result[command] == value.splitlines()
     assert netmiko_connection_handler.session.disconnect.called
 
@@ -125,6 +131,7 @@ def test_netmiko_gc_exec_command_post_checks(netmiko_connection_handler: Mock, r
 
     netmiko_connection_handler.assert_called_once_with(**NETMIKO_C_ARGS)
     for command, value in list(NETMIKO_COMMANDS.items())[:1]:
+        assert command in result
         assert result[command] == value.splitlines()
 
     with pytest.raises(Exception):

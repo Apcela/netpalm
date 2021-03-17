@@ -14,7 +14,7 @@ CISGO_DEFAULT_HOSTNAME = "cisshgo1000v"
 CISGO_NEW_HOSTNAME = CISGO_DEFAULT_HOSTNAME.upper() + str(random.randint(100, 900))
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def cisgo_helper():
     return CisgoHelper()
 
@@ -71,7 +71,8 @@ def test_setconfig_netmiko_multiple(cisgo_helper: CisgoHelper):
         "enable_mode": True
     }
     res = helper.post_and_check('/setconfig', pl)
-    assert len(res["changes"]) > 4
+    assert "yeti(config)#" in res["changes"]
+    assert "bufoon(config)#" in res["changes"]
 
 
 @pytest.mark.setconfig

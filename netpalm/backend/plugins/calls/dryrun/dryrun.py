@@ -28,9 +28,9 @@ def dryrun(**kwargs):
         result = {}
         if lib == "napalm":
             napl = naplm(**kwargs)
-            sesh = napl.connect()
-            result = napl.config(session=sesh, command=config, dry_run=True)
-            napl.logout(sesh)
+            napl.connect()
+            result = napl.config(command=config, dry_run=True)
+            napl.logout()
         elif lib == "ncclient":
             # if we rendered j2config, add it to the kwargs['args'] dict
             if j2conf and config:
@@ -43,9 +43,8 @@ def dryrun(**kwargs):
             ncc.logout(sesh)
         elif lib == "netmiko":
             netmik = netmko(**kwargs)
-            sesh = netmik.connect()
-            result = netmik.config(sesh, config, enable_mode, dry_run=True)
-            netmik.logout(sesh)
+            result = netmik.config(config, enable_mode, dry_run=True)
+            netmik.logout()
     except Exception as e:
         write_meta_error(f"{e}")
 

@@ -1,9 +1,12 @@
 import napalm
+from napalm.base.base import NetworkDriver
+from typing import Dict
 
 from netpalm.backend.core.utilities.rediz_meta import write_meta_error
+from netpalm.backend.plugins.drivers.base_driver import BaseDriver
 
 
-class naplm:
+class naplm(BaseDriver):
 
     def __init__(self, **kwargs):
         self.connection_args = kwargs.get("connection_args", False)
@@ -13,15 +16,17 @@ class naplm:
         self.connection_args["hostname"] = self.connection_args.pop("host")
         del self.connection_args["device_type"]
 
-    def connect(self):
+    def connect(self) -> NetworkDriver:
         try:
             driver = napalm.get_network_driver(self.driver)
-            napalmses = driver(**self.connection_args)
-            return napalmses
+            self.session: NetworkDriver = driver(**self.connection_args)
+            return self.session
         except Exception as e:
             write_meta_error(f"{e}")
 
-    def sendcommand(self, session=False, command=False):
+    def sendcommand(self, command=False) -> Dict:
+        assert self.session is not None
+        session = self.session
         try:
             result = {}
             session.open()
@@ -36,7 +41,15 @@ class naplm:
         except Exception as e:
             write_meta_error(f"{e}")
 
-    def config(self, session=False, command=False, dry_run=False):
+    def exec_command(self, **kwargs) -> Dict:
+        raise NotImplementedError()
+
+    def exec_config(self, **kwargs) -> Dict:
+        raise NotImplementedError()
+
+    def config(self, command=False, dry_run=False) -> Dict:
+        assert self.session is not None
+        session = self.session
         try:
             if type(command) == list:
                 napalmconfig = ""
@@ -57,9 +70,8 @@ class naplm:
         except Exception as e:
             write_meta_error(f"{e}")
 
-    def logout(self, session):
+    def logout(self):
         try:
-            response = session.close()
-            return response
+            self.session.close()
         except Exception as e:
             write_meta_error(f"{e}")
