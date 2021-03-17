@@ -1,17 +1,19 @@
+from typing import Dict, List, Union
+
 import napalm
 from napalm.base.base import NetworkDriver
-from typing import Dict
 
 from netpalm.backend.core.utilities.rediz_meta import write_meta_error
-from netpalm.backend.plugins.drivers.base_driver import BaseDriver
+from netpalm.backend.plugins.drivers.base_driver import BaseDriver, normalize_commands
 
 
 class naplm(BaseDriver):
 
     def __init__(self, **kwargs):
         self.connection_args = kwargs.get("connection_args", False)
-        #convert the netmiko naming format to the native napalm format
-        driver_lookup = {"arista_eos":"eos","juniper":"junos","cisco_xr":"iosxr", "nxos":"nxos", "cisco_nxos_ssh":"nxos_ssh", "cisco_ios":"ios"}
+        # convert the netmiko naming format to the native napalm format
+        driver_lookup = {"arista_eos": "eos", "juniper": "junos", "cisco_xr": "iosxr", "nxos": "nxos",
+                         "cisco_nxos_ssh": "nxos_ssh", "cisco_ios": "ios"}
         self.driver = driver_lookup[self.connection_args.get("device_type", False)]
         self.connection_args["hostname"] = self.connection_args.pop("host")
         del self.connection_args["device_type"]

@@ -1,7 +1,7 @@
 import logging
+from typing import Dict, List, Union
 
 from netmiko import ConnectHandler, BaseConnection
-from typing import Dict, List, Union
 
 from netpalm.backend.core.confload.confload import config
 from netpalm.backend.core.utilities.rediz_meta import write_meta_error
@@ -49,7 +49,7 @@ class netmko(BaseDriver):
         except Exception as e:
             write_meta_error(f"{e}")
 
-    def exec_command(self, command: Union[List, str]=None, post_checks: List[Dict]=None, **kwargs) -> Dict:
+    def exec_command(self, command: Union[List, str] = None, post_checks: List[Dict] = None, **kwargs) -> Dict:
         assert self.session is not None
         commands = normalize_commands(command)
 
@@ -69,10 +69,10 @@ class netmko(BaseDriver):
 
         return result
 
-    def exec_config(self, config: Union[List, str]=None,
-                    enable_mode: bool=False,
-                    post_checks: List[Dict]=None,
-                    pre_checks: List[Dict]=None, **kwargs) -> Dict:
+    def exec_config(self, config: Union[List, str] = None,
+                    enable_mode: bool = False,
+                    post_checks: List[Dict] = None,
+                    pre_checks: List[Dict] = None, **kwargs) -> Dict:
         assert self.session is not None
         # config = normalize_commands(config)
 
